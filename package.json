@@ -13,7 +13,8 @@
     "http-proxy": "*",
     "body-parser": "*",
     "chrome-remote-interface": "*",
-    "ws": "*"
+    "ws": "*",
+    "open": "*"
   }
 }
 
