@@ -2,6 +2,7 @@ http = require('http')
 _ = require('lodash')
 url = require('url')
 events = require('events')
+zlib = require('zlib')
 fs = require('fs')
 
 IncomingMessage = http.IncomingMessage.prototype
@@ -38,11 +39,9 @@ class Server extends events.EventEmitter
       url.parse(req.url),
       headers: req.headers
       method: req.method
-      agent: false
     )
 
     remoteReq = http.request(options)
-    req.pipe(remoteReq, end: true)
 
     data = ""
     req.on 'data', (chunk) ->
@@ -54,24 +53,61 @@ class Server extends events.EventEmitter
     remoteReq.on 'response', (remoteRes) =>
       @handleResponse(id, req, res, remoteRes)
 
+    req.pipe(remoteReq)
+
   handleResponse: (id, req, res, remoteRes) ->
     remoteRes.statusMessage = http.STATUS_CODES[remoteRes.statusCode]
 
     contentType = remoteRes.headers['content-type']
-    if contentType
-      remoteRes.mimeType = contentType.substr(0, contentType.indexOf(';'))
 
-    # proxy the request outside
-    res.writeHeader(remoteRes.statusCode, remoteRes.allHeaders)
-    remoteRes.pipe(res, end: true)
+    if contentType
+      remoteRes.mimeType = mime = contentType.replace(/;.*$/, '')
+
+      remoteRes.resourceType = if mime.match(/^image/)
+        "Image"
+      else if mime == 'text/css'
+        "Stylesheet"
+      else if mime.match(/javascript/)
+        "Script"
+      else if mime == 'text/html' || mime.match(/json/) || mime.match(/xml/)
+        "Document"
+      else
+        "Other"
+    else
+      remoteRes.resourceType = "Other"
+
+    remoteRes.pipe(res)
+    res.writeHead(remoteRes.statusCode, remoteRes.allHeaders)
 
     @emit('responseReceived', id, req, remoteRes)
 
-    data = ""
-    remoteRes.on 'data', (chunk) ->
-      data += chunk.toString()
+    contentEncoding = remoteRes.headers['content-encoding']
+    bodyReader = if contentEncoding == 'gzip'
+      remoteRes.pipe(zlib.createGunzip())
+    else if contentEncoding == 'deflate'
+      remoteRes.pipe(zlib.createInflate())
+    else
+      remoteRes
 
-    remoteRes.on 'end', =>
+    bodyChunks = []
+    bodyReader.on 'data', (chunk) ->
+      bodyChunks.push(chunk)
+
+    bodyReader.on 'end', =>
+      result = Buffer.concat(bodyChunks)
+      data = if remoteRes.resourceType == 'Image' || remoteRes.resourceType == 'Other'
+        {
+          body: result.toString('base64'),
+          base64Encoded: true,
+          length: result.length
+        }
+      else
+        {
+          body: result.toString(),
+          base64Encoded: false,
+          length: result.length
+        }
+
       @emit('dataReceived', id, data)
 
 module.exports = Server

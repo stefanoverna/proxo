@@ -1,8 +1,11 @@
 DebuggingServer = require('./debugging_server')
 ProxyServer = require('./proxy_server')
+DevtoolsServer = require('./devtools_server')
+utf8 = require('utf8')
 
 debuggingServer = new DebuggingServer(9333)
 proxyServer = new ProxyServer(9999)
+devtoolsServer = new DevtoolsServer(3000)
 
 timestamp = ->
   new Date().getTime() / 1000
@@ -11,11 +14,9 @@ requestTimings = {}
 requestBodies = {}
 
 debuggingServer.on 'responseBodyRequest', (connection, command, id) ->
-  connection.replyToCommand(command, body: requestBodies[id])
+  connection.replyToCommand(command, requestBodies[id])
 
 proxyServer.on 'requestWillBeSent', (id, request, body) ->
-  console.log 'request 1'
-
   time = timestamp()
   requestTimings[id] = time
 
@@ -35,8 +36,6 @@ proxyServer.on 'requestWillBeSent', (id, request, body) ->
   )
 
 proxyServer.on 'responseReceived', (id, request, response) ->
-  console.log 'request 2'
-
   time = timestamp()
 
   debuggingServer.sendEvent(
@@ -44,7 +43,7 @@ proxyServer.on 'responseReceived', (id, request, response) ->
     requestId: id,
     loaderId: "LOADER",
     timestamp: time,
-    type: "Document",
+    type: response.resourceType,
     response:
       url: request.url,
       status: response.statusCode,
@@ -72,8 +71,6 @@ proxyServer.on 'responseReceived', (id, request, response) ->
   )
 
 proxyServer.on 'dataReceived', (id, data) ->
-  console.log 'request 3'
-
   time = timestamp()
 
   requestBodies[id] = data
