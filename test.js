@@ -2,7 +2,7 @@ var open = require('open');
 var WsServer = require('ws').Server;
 var express = require('express');
 var urlUtils = require('url');
-var proxy = require('http-proxy').createProxyServer();
+var http = require('http');
 
 var wss = new WsServer({ port: 9333 });
 
@@ -156,37 +156,28 @@ proxyServer.listen(8383);
 
 open('http://127.0.0.1:3000/front_end/inspector.html?ws=127.0.0.1:9333');
 
-// {
-//   "id":29,
-//   "method":"Network.getResponseBody",
-//   "params":{"requestId":"8525.12"}
-// }
+// var http = require('http');
 
-// {
-//   "id":29,
-//   "result":{
-//     "body":"R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=",
-//     "base64Encoded":true
-//   }
-// }
+// http.createServer(onRequest).listen(3000);
 
-// if (message.method == 'Console.enable') {
-//   ws.send(JSON.stringify({
-//     id: message.id,
-//     result: {}
-//   }));
-//   ws.send(JSON.stringify({
-//     "method":"Console.messageAdded",
-//     "params": {
-//       "message": {
-//         "source": "console-api",
-//         "level": "log",
-//         "text": "BELLA DUE",
-//         "timestamp": new Date().getTime(),
-//         "type": "log",
-//         "parameters": [{"type":"string","value":"BELLA DUE"}],
-//         "stackTrace": []
-//       }
-//     }
-//   }));
+// function onRequest(client_req, client_res) {
+//   console.log('serve: ' + client_req.url);
+
+//   var options = {
+//     hostname: 'www.google.com',
+//     port: 80,
+//     path: client_req.url,
+//     method: 'GET'
+//   };
+
+//   var proxy = http.request(options, function (res) {
+//     res.pipe(client_res, {
+//       end: true
+//     });
+//   });
+
+//   client_req.pipe(proxy, {
+//     end: true
+//   });
+// }
 

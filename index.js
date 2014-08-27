@@ -1,5 +1,3 @@
-var express = require('express');
-var devtools = express();
-devtools.use(express.static(__dirname + '/devtools'));
-devtools.listen(3000);
+require('coffee-script/register');
+require('./lib/proxo');
 
