@@ -1,3 +1,5 @@
+events = require('events')
+
 METHOD_NOT_FOUND_ERROR = -32601
 
 CANNED_RESPONSES = {
@@ -8,7 +10,7 @@ CANNED_RESPONSES = {
   'Page.enable': {}
 }
 
-class DebuggingSession
+class DebuggingSession extends events.EventEmitter
   constructor: (@ws) ->
     @ws.on 'message', (message) => @handleCommand(message)
 
@@ -17,6 +19,8 @@ class DebuggingSession
 
     if response = CANNED_RESPONSES[command.method]
       @replyToCommand(command, response)
+    else if command.method == 'Network.getResponseBody'
+      @emit('responseBodyRequest', this, command, command.params.requestId)
     else
       @replyToCommand(
         command,

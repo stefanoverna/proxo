@@ -27,7 +27,8 @@ class Server extends events.EventEmitter
     requestCount = 0
     @server.on 'request', (req, res) =>
       requestCount += 1
-      @handleRequest(requestCount, req, res)
+      id = "proxo." + requestCount
+      @handleRequest(id, req, res)
 
     @server.listen(port)
 
@@ -51,16 +52,20 @@ class Server extends events.EventEmitter
       @emit('requestWillBeSent', id, req, data)
 
     remoteReq.on 'response', (remoteRes) =>
-      @handleResponse(id, res, remoteRes)
+      @handleResponse(id, req, res, remoteRes)
 
-  handleResponse: (id, res, remoteRes) ->
-    statusMessage = http.STATUS_CODES[remoteRes.statusCode]
+  handleResponse: (id, req, res, remoteRes) ->
+    remoteRes.statusMessage = http.STATUS_CODES[remoteRes.statusCode]
+
+    contentType = remoteRes.headers['content-type']
+    if contentType
+      remoteRes.mimeType = contentType.substr(0, contentType.indexOf(';'))
 
     # proxy the request outside
     res.writeHeader(remoteRes.statusCode, remoteRes.allHeaders)
     remoteRes.pipe(res, end: true)
 
-    @emit('responseReceived', id, remoteRes)
+    @emit('responseReceived', id, req, remoteRes)
 
     data = ""
     remoteRes.on 'data', (chunk) ->
