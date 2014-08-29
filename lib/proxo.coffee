@@ -89,3 +89,5 @@ proxyServer.on 'dataReceived', (id, data) ->
     timestamp: time
   )
 
+require('open')('http://127.0.0.1:3000/front_end/inspector.html?ws=127.0.0.1:9333')
+
